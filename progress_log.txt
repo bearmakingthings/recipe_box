@@ -1,0 +1,8 @@
+recipe box project progress log:
+
+up to 9/20:
+- conceptualizing project, what functionality i want
+- learning about database design, drawing up ER model and
+  using it to develop schema
+- figuring out project structure, trying to split into mvc architecture
+- beginning to define interfaces, determining what operations the model+view must perform

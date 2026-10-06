@@ -46,7 +46,7 @@ ADD CONSTRAINT parent_dir
 CREATE TABLE tags
 (
 	id		INT 			PRIMARY KEY AUTO_INCREMENT,
-    name	VARCHAR(100)	NOT NULL
+    name	VARCHAR(100)	UNIQUE NOT NULL
 );
 
 -- Linking table between tags and the recipes they contain.

@@ -1,6 +1,7 @@
 package view;
 
-// Operations performed by the UI.
+// Operations performed by a UI.
 public interface UI {
+
 
 }

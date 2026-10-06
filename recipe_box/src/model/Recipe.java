@@ -1,6 +1,9 @@
 package model;
 
-// A recipe the user has uploaded.
-class Recipe extends File {
+// A recipe.
+public class Recipe extends File {
+  String document;
+  String img;
+  String url;
 
 }

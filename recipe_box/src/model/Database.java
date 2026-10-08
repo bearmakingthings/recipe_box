@@ -1,6 +1,6 @@
 package model;
 
-import java.util.Map;
+import java.util.List;
 
 // TODO NOTES:
 // - database never exposes SQL syntax! nobody else should have to import java.sql!
@@ -11,23 +11,31 @@ import java.util.Map;
 // The database storing this recipe system.
 interface Database {
 
-  // Load a recipe or directory.
-  Recipe openRecipe(int r_id) throws IllegalArgumentException;
-  Directory openDirectory(int d_id) throws IllegalArgumentException;
+  // Load the details of a recipe.
+  Recipe loadRecipe(int r_id) throws IllegalArgumentException;
 
-  // Add or remove a tag from the selection.
-  Map<Integer, File> filterOnTag(int t_id) throws IllegalArgumentException;
-  Map<Integer, File> unfilterOnTag(int t_id) throws IllegalArgumentException;
+  // Load the details of a directory. The Files it contains will be lazy-loaded, i.e. their
+  // IDs will be loaded, but the according model objects will not.
+  Directory loadDirectory(int d_id) throws IllegalArgumentException;
+
+  // Populate the contents of the given directory.
+  void loadDirectoryContents(Directory d) throws IllegalArgumentException;
+
+  // Retrieve the IDs of the files in the selected directory matching the selected tags.
+  List<Integer> filterFiles(int dir_id, List<Integer> tags) throws IllegalArgumentException;
 
   // Create new files or tags from a builder.
   Recipe createRecipe(RecipeBuilder r) throws RuntimeException;
   Directory createDirectory(DirectoryBuilder d) throws RuntimeException;
   Tag createTag(TagBuilder t) throws RuntimeException;
 
-  // Edit files from a builder.
+  // Edit the details of a file or tag from a builder.
   void updateRecipe(int r_id, RecipeBuilder r) throws IllegalArgumentException;
   void updateDirectory(int d_id, DirectoryBuilder d) throws IllegalArgumentException;
   void updateTag(int t_id, TagBuilder t) throws IllegalArgumentException;
+
+  // Move a file.
+  void moveFile(int f_id, int newParentDir) throws IllegalArgumentException;
 
   // Delete files.
   void deleteFile(int f_id) throws IllegalArgumentException;
@@ -36,8 +44,6 @@ interface Database {
   // Apply or remove tags on files.
   void tagFile(int f_id, int t_id) throws IllegalArgumentException;
   void untagFile(int f_id, int t_id) throws IllegalArgumentException;
-
-
 
   // Create a new Recipe.
   interface RecipeBuilder {

@@ -20,7 +20,9 @@ CREATE TABLE recipes
     document		VARCHAR(20),
     url				VARCHAR(150),
     image			VARCHAR(20),
-    CONSTRAINT r_id FOREIGN KEY (id) REFERENCES files (id)
+    CONSTRAINT r_id 
+		FOREIGN KEY (id) REFERENCES files (id)
+		ON DELETE CASCADE
 );
 
 -- Directories and their names.
@@ -30,6 +32,7 @@ CREATE TABLE directories
     name			VARCHAR(100)	NOT NULL,
     CONSTRAINT d_id 
 		FOREIGN KEY (id) REFERENCES files (id)
+			ON DELETE CASCADE
 );
 
 -- Add the root directory before the foreign key constraint is placed on the directory table.
@@ -52,8 +55,8 @@ CREATE TABLE tags
 -- Linking table between tags and the recipes they contain.
 CREATE TABLE tag_contents 
 (
-	tag_id		INT 	REFERENCES tags (id),
-    file_id		INT		REFERENCES files (id),
+	tag_id		INT 	REFERENCES tags (id) ON DELETE CASCADE,
+    file_id		INT		REFERENCES files (id) ON DELETE CASCADE,
     CONSTRAINT tag_pk
 		PRIMARY KEY (tag_id, file_id)
 );

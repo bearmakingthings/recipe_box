@@ -23,9 +23,8 @@ class MySQLDB implements Database {
       throw new RuntimeException("Connection successful, yet database not found.");
     }
 
-    // TODO do we need transactions?
-    // TODO need locking, for sure
-    // Enable transactions.
+    // Enable transactions. Necessary in order to insert an entry into the file table, then
+    // retrieve the new file's id to insert the matching entry into the filetype-specific table.
     try {
       db.setAutoCommit(false);
     } catch (SQLException e) {
@@ -68,29 +67,28 @@ class MySQLDB implements Database {
 
   // TODO
   public Recipe createRecipe(RecipeBuilder r) throws RuntimeException {
-    // Get the lock on the file table.
     // Insert a new file with the given parent directory.
     // Retrieve the new file's id.
-    // Release the lock on the table.
     // Insert a new recipe with the given id into the recipes table, using the details
     // in the builder.
+    // Commit the transaction.
     return null;
   }
 
   // TODO
   public Directory createDirectory(DirectoryBuilder d) throws RuntimeException {
-    // Get the lock on the file table.
     // Insert a new file with the given parent directory.
     // Retrieve the new file's id.
-    // Release the lock on the table.
     // Insert a new directory with the given id into the directory table, using the details
     // given in the builder.
+    // Commit the transaction.
     return null;
   }
 
   // TODO
   public Tag createTag(TagBuilder t) throws RuntimeException {
     // Insert a new tag into the tag table with the details given in the builder.
+    // Commit the statement.
     return null;
   }
 
@@ -131,13 +129,13 @@ class MySQLDB implements Database {
 
   // TODO
   public void deleteFile(int f_id) throws IllegalArgumentException {
-    // Delete this file from the file table, cascading to its entry in the
-    // recipe/directory tables.
+    // Delete this file from the file table, removing its entry in the
+    // filetype-specific table, as well as any of its entries in the tag linking table.
   }
 
   // TODO
   public void deleteTag(int t_id) throws IllegalArgumentException {
-    // Delete this tag from the tag table, cascading to its entries in the linking table.
+    // Delete this tag from the tag table, removing its entries in the linking table.
   }
 
 }

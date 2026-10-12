@@ -1,6 +1,7 @@
 package model;
 
 import java.util.List;
+import java.util.Map;
 
 // TODO NOTES:
 // - database never exposes SQL syntax! nobody else should have to import java.sql!
@@ -9,17 +10,16 @@ import java.util.List;
 
 
 // The database storing this recipe system.
-interface Database {
+public interface Database {
 
   // Load the details of a recipe.
   Recipe loadRecipe(int r_id) throws IllegalArgumentException;
 
-  // Load the details of a directory. The Files it contains will be lazy-loaded, i.e. their
-  // IDs will be loaded, but the according model objects will not.
+  // Load the details of a directory, but not its contents.
   Directory loadDirectory(int d_id) throws IllegalArgumentException;
 
   // Populate the contents of the given directory.
-  void loadDirectoryContents(Directory d) throws IllegalArgumentException;
+  Map<Integer, File> loadDirectoryContents(int d_id) throws IllegalArgumentException;
 
   // Retrieve the IDs of the files in the selected directory matching the selected tags.
   List<Integer> filterFiles(int dir_id, List<Integer> tags) throws IllegalArgumentException;
@@ -55,23 +55,11 @@ interface Database {
     RecipeBuilder submit() throws IllegalStateException;
   }
 
-  // TODO remove
-  // Edit an existing recipe, updating the associated Recipe object upon completion.
-  interface RecipeEditor extends RecipeBuilder {
-    RecipeEditor submit() throws IllegalStateException;
-  }
-
   // Create a new Directory.
   interface DirectoryBuilder {
     DirectoryBuilder setName(String newName);
     DirectoryBuilder setParent(int d_id);
     DirectoryBuilder submit() throws IllegalStateException;
-  }
-
-  // TODO remove
-  // Edit an existing directory, updating the associated Directory object upon submission.
-  interface DirectoryEditor extends DirectoryBuilder {
-    DirectoryEditor submit() throws IllegalStateException;
   }
 
   // Create a new Tag.
@@ -80,10 +68,6 @@ interface Database {
     TagBuilder submit() throws IllegalStateException;
   }
 
-  // TODO remove
-  // Edit an existing tag, updating the associated Tag object upon submission.
-  interface TagEditor extends TagBuilder {
-    TagEditor submit() throws IllegalStateException;
-  }
-
+  // Shut down the connection.
+  void close() throws RuntimeException;
 }

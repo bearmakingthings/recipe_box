@@ -2,11 +2,33 @@ package model;
 
 // A file, which may be a directory or a recipe.
 public abstract class File {
-  int id;
-  Directory parent;
+  final int id;
   String name;
+  Directory parent;
 
-  // TODO:
-  // - will need name-based recursive path resolution for methods that return file ids.
+  // Initialize this file, unaware of its parent Directory.
+  protected File(int id, String name) {
+    this.id = id;
+    this.name = name;
+    this.parent = null;
+  }
+
+  void setParent(Directory parent) {
+    this.parent = parent;
+  }
+
+  // TODO MAYBE DELETE GETTERS, DEPENDING ON WHO NEEDS THEM.
+  // getName is probably going to be useful to UIs, though?
+
+  // Return the name of this File.
+  public String getName() {
+    return this.name;
+  }
+
+  // Return this File's ID.
+  public int getId() {
+    return this.id;
+  }
+
 
 }

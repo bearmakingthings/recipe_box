@@ -1,15 +1,33 @@
 package model;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+
+/*
+  TODO notes on the builders :)
+   - they are created via public methods that return an interface type (RecipeBuilder, etc),
+     but they are submitted via package-private methods that take in a class-specific type.
+   - muhahaha that took me so long but it's so obvious now.
+   - this allows the database implementation to access the fields of the builder directly,
+     which makes more sense than my previous method of creating getters in the interface.
+   - that previous way sucked. the users of the setter methods, who are all outside the
+     model package, would have no need for the getters, only model classes do.
+ */
+
+
 // The connection to the local recipe database and operations on it.
 public class MySQLDB implements Database {
   // The active connection to the DB.
-  private Connection con;
+  protected Connection con;
 
+  // Log into the given database.
   public MySQLDB(String db_url, String user, String pass) throws RuntimeException {
     // Connect to the database.
     con = null;
@@ -32,11 +50,116 @@ public class MySQLDB implements Database {
     } catch (SQLException e) {
       throw new RuntimeException(e.getMessage());
     }
+  }
+
+  // Close the connection to the database.
+  public void close() throws RuntimeException {
+    try {
+      con.rollback();
+      con.close();
+    } catch (SQLException e) {
+      throw new RuntimeException(e.getMessage());
+    }
+  }
+
+  // Instantiate a new recipe builder and sign on an observer
+  // to notify of its completion.
+  public RecipeBuilder createRecipe(FileObserver obs) {
+    return new MySQLRecipeBuilder(this, obs);
+  }
+
+  // TODO CURRENT WORK BLOCK ----------------------------------------------------------------------------------------
+
+  // Create a new Recipe object using the given builder.
+  void submitRecipe(MySQLRecipeBuilder bdr) {
+
+    // Create a new file entry under the parent directory, and get its id.
+    int recipeId = this.insertFile(bdr.parent);
+
+    // Insert the recipe details into the recipes table.
+    // TODO doing
+
+    try {
+      PreparedStatement recipeStmt = con.prepareStatement("");
+
+      // Set the retrieved file id as this recipe's id.
+      recipeStmt.setInt(1, recipeId);
+
+      // ADD THE FEATURES PLS
+
+
+      // Commit the transaction.
+      con.commit();
+    } catch (SQLException e) {
+      throw new RuntimeException("Could not create new recipe: " + e.getMessage());
+    }
+
+    // TODO notify the file observer...
 
   }
 
+  public DirectoryBuilder createDirectory(FileObserver obs) {
+    return new MySQLDirectoryBuilder(this, obs);
+  }
+
+  void submitNewDirectory(MySQLDirectoryBuilder bdr) {
+    // Insert a new file with the given parent directory.
+    // Retrieve the new file's id.
+    // Insert a new directory with the given id into the directory table, using the details
+    // given in the builder.
+    // Commit the transaction.
+  }
+
+  public TagBuilder createTag(TagObserver obs) {
+    return new MySQLTagBuilder(this, obs);
+  }
+
+  void submitNewTag(MySQLTagBuilder bdr) {
+
+  }
+
+  // Create a builder to edit the given recipe.
+  public RecipeBuilder editRecipe(Recipe editing) {
+    return new MySQLRecipeEditor(this, editing);
+  }
+
+  // Update the details of a recipe using the given builder.
+  void submitRecipeEdits(MySQLRecipeEditor edr) {
+    // If the recipe was moved, do that separately.
+    if (edr.parent != null) {
+      this.moveFile(edr.editing.id, edr.parent);
+    }
+
+    // TODO
+    // Update the recipe entry with the changed fields.
+    // Commit the change.
+  }
+
+  // TODO
+  public DirectoryBuilder editDirectory(Directory editing) {
+    return null;
+  }
+
+  // TODO
+  void submitDirectoryEdits(DirectoryBuilder edr) {
+
+  }
+
+  // TODO
+  public TagBuilder editTag(Tag editing) {
+    return null;
+  }
+
+  // TODO
+  void submitTagEdits(TagBuilder edr) {
+    // Insert a new tag into the tag table with the details given in the builder.
+    // Commit the statement.
+  }
+
+  // TODO END CURRENT WORK BLOCK -------------------------------------------------------------------------
+
   // Load the details of a recipe.
-  public Recipe loadRecipe(int r_id) throws IllegalArgumentException {
+  public Recipe loadRecipe(int r_id) throws RuntimeException {
     // Select the file from the recipes table.
     ResultSet recipeTuple;
     try {
@@ -66,7 +189,7 @@ public class MySQLDB implements Database {
   }
 
   // Load the details of a directory, but not its contents.
-  public Directory loadDirectory(int d_id) throws IllegalArgumentException {
+  public Directory loadDirectory(int d_id) throws RuntimeException {
     // Select the file from the directories table.
     ResultSet dirTuple;
     try {
@@ -92,9 +215,8 @@ public class MySQLDB implements Database {
     }
   }
 
-  // TODO
-  public Map<Integer, File> loadDirectoryContents(int d_id) throws IllegalArgumentException {
-
+  // Select all the subdirectories of the given directory and load them into according objects.
+  public Map<Integer, Directory> loadDirectoryChildren(int d_id) throws RuntimeException {
     // Select the directories whose parent is this directory.
     ResultSet dirChildren;
     try {
@@ -111,6 +233,30 @@ public class MySQLDB implements Database {
       throw new RuntimeException("Could not retrieve children in directory " + d_id +
               ": " + e.getMessage());
     }
+    // Create a new object from each subdirectory and compile them into a map.
+    Map<Integer, Directory> children = new TreeMap<>();
+    try {
+      while (dirChildren.next()) {
+        int childId = dirChildren.getInt("id");
+        // If this directory is its own child, it is the root. Exclude it.
+        // TODO maybe remove?
+        if (childId == d_id) {
+          continue;
+        }
+        children.put(childId, this.loadDirectory(childId));
+      }
+    } catch (SQLException e) {
+      throw new RuntimeException("Could not load subdirectories of " + d_id +
+              ": " + e.getMessage());
+    }
+
+    return children;
+
+  }
+
+  // Select all the non-directory Files whose parent is the given directory and load them
+  // into according objects.
+  public Map<Integer, File> loadDirectoryContents(int d_id) throws RuntimeException {
 
     // Select the recipes whose parent is this directory.
     ResultSet dirContents;
@@ -129,57 +275,26 @@ public class MySQLDB implements Database {
               ": " + e.getMessage());
     }
 
-    // Create a new object from each recipe and subdirectory and compile them into a map.
-    Map<Integer, File> contents = new TreeMap<>();
+    // Create a new object from each recipe and compile them into a map.
+    Map<Integer, File> files = new TreeMap<>();
     try {
-      while (dirChildren.next()) {
-        int childId = dirChildren.getInt("id");
-        contents.put(childId, this.loadDirectory(childId));
-      }
       while (dirContents.next()) {
         int contentId = dirContents.getInt("id");
-        contents.put(contentId, this.loadRecipe(contentId));
+        files.put(contentId, this.loadRecipe(contentId));
       }
     } catch (SQLException e) {
-      throw new RuntimeException("Could not create Files for contents of directory " + d_id +
+      throw new RuntimeException("Could not load contents of directory " + d_id +
               ": " + e.getMessage());
     }
-
-    return contents;
+    return files;
   }
 
   // TODO
-  public List<Integer> filterFiles(int dir_id, List<Integer> tags) throws IllegalArgumentException {
+  public List<Integer> filterFiles(int dir_id, List<Tag> tags) throws RuntimeException {
     // Select the IDs of all files in the given directory matching all of the given tags.
     return List.of();
   }
 
-  // TODO
-  public Recipe createRecipe(RecipeBuilder r) throws RuntimeException {
-    // Insert a new file with the given parent directory.
-    // Retrieve the new file's id.
-    // Insert a new recipe with the given id into the recipes table, using the details
-    // in the builder.
-    // Commit the transaction.
-    return null;
-  }
-
-  // TODO
-  public Directory createDirectory(DirectoryBuilder d) throws RuntimeException {
-    // Insert a new file with the given parent directory.
-    // Retrieve the new file's id.
-    // Insert a new directory with the given id into the directory table, using the details
-    // given in the builder.
-    // Commit the transaction.
-    return null;
-  }
-
-  // TODO
-  public Tag createTag(TagBuilder t) throws RuntimeException {
-    // Insert a new tag into the tag table with the details given in the builder.
-    // Commit the statement.
-    return null;
-  }
 
   // TODO
   // TODO SHOULD YOU BE ABLE TO TAG DIRECTORIES? HM.
@@ -205,127 +320,77 @@ public class MySQLDB implements Database {
     - e.g. you're in folder path a -> b -> c -> d. you filter on "chicken", which b is tagged with.
     - what does select statement look like?
    */
-  public void tagFile(int f_id, int t_id) throws IllegalArgumentException {
+  public void tagFile(int file, int tag) throws RuntimeException {
     // Create a new entry in the linking table.
     // If the operation fails on foreign key constraints, throw.
   }
 
   // TODO
-  public void untagFile(int f_id, int t_id) throws IllegalArgumentException {
+  public void untagFile(int file, int tag) throws RuntimeException {
     // Remove the given id pair from the linking table.
   }
 
-  public void close() throws RuntimeException {
+  // TODO TEST
+  // Move a file from its current directory to the one given.
+  public void moveFile(int file, int newParent) throws RuntimeException {
     try {
-      con.close();
+      // Update the file table entry for this file with the new parent directory.
+      PreparedStatement moveStmt = con.prepareStatement(
+              "UPDATE files " +
+                      "SET parent = ? " +
+                      "WHERE id = ?;");
+      moveStmt.setInt(1, newParent);
+      moveStmt.setInt(2, file);
+      if (moveStmt.executeUpdate() != 1) {
+        throw new RuntimeException("File move was not executed.");
+      }
+      // Commit the change.
+      con.commit();
     } catch (SQLException e) {
-      throw new RuntimeException(e.getMessage());
+      throw new RuntimeException("Could not move file: " + e.getMessage());
     }
+
+    // TODO notify the observer.
   }
 
   // TODO
-  public void updateRecipe(int r_id, RecipeBuilder r) throws IllegalArgumentException {
-    // Update the given recipe with the details in the builder.
-    // If the operation fails, check the error message and throw an according exception.
-  }
-
-  // TODO
-  public void updateDirectory(int d_id, DirectoryBuilder d) throws IllegalArgumentException {
-    // Update the given directory with the details in the builder.
-    // If the operation fails, check the error message and throw an according exception.
-  }
-
-  // TODO
-  public void updateTag(int t_id, TagBuilder t) throws IllegalArgumentException {
-    // Update the given tag with the details in the builder.
-    // If the operation fails, check the error message and throw an according exception.
-  }
-
-  // TODO
-  public void moveFile(int f_id, int newParentDir) throws IllegalArgumentException {
-    // Update the file table entry for this file with the new parent directory.
-  }
-
-  // TODO
-  public void deleteFile(int f_id) throws IllegalArgumentException {
+  public void deleteFile(int file) throws RuntimeException {
     // Delete this file from the file table, removing its entry in the
     // filetype-specific table, as well as any of its entries in the tag linking table.
   }
 
   // TODO
-  public void deleteTag(int t_id) throws IllegalArgumentException {
+  public void deleteTag(int tag) throws RuntimeException {
     // Delete this tag from the tag table, removing its entries in the linking table.
   }
 
-  // TODO
-  class MySQLRecipeBuilder implements RecipeBuilder {
-
-    public RecipeBuilder setName(String newName) {
-      return null;
+  // Insert a new file into the database and return its ID. Does not commit.
+  protected int insertFile(Integer parent) throws RuntimeException {
+    if (parent == null) {
+      throw new IllegalStateException("New file must have a parent directory.");
     }
+    try {
+      // Insert a new file with the given parent directory.
+      PreparedStatement fileStmt = con.prepareStatement(
+              "INSERT INTO files (parent) VALUES (?)");
+      fileStmt.setInt(1, parent);
+      if (fileStmt.executeUpdate() != 1) {
+        throw new RuntimeException("File insertion was not executed..");
+      }
+      // Retrieve the newly inserted ID.
+      PreparedStatement getFileId = con.prepareStatement("SELECT last_insert_id();");
+      ResultSet idSet = getFileId.executeQuery();
+      // Make sure the result set is not empty.
+      if (!idSet.next()) {
+        throw new RuntimeException("Could not retrieve inserted file's ID");
+      }
+      // The ID should be the first and only column in the result set.
+      return idSet.getInt(1);
 
-    public RecipeBuilder setDoc(String document) {
-      return null;
-    }
-
-    public RecipeBuilder setUrl(String url) {
-      return null;
-    }
-
-    public RecipeBuilder setImg(String img) {
-      return null;
-    }
-
-    public RecipeBuilder setParent(int d_id) {
-      return null;
-    }
-
-    public RecipeBuilder submit() throws IllegalStateException {
-      return null;
-    }
-  }
-
-  // TODO
-  class MySQLDirectoryBuilder implements DirectoryBuilder {
-
-    public DirectoryBuilder setName(String newName) {
-      return null;
-    }
-
-    public DirectoryBuilder setParent(int d_id) {
-      return null;
-    }
-
-    public DirectoryBuilder submit() throws IllegalStateException {
-      return null;
+    } catch (SQLException e) {
+      throw new RuntimeException("Error creating new file: " + e.getMessage());
     }
   }
 
-  // TODO
-  class MySQLTagBuilder implements TagBuilder {
-
-    public TagBuilder setName(String name) {
-      return null;
-    }
-
-    public TagBuilder submit() throws IllegalStateException {
-      return null;
-    }
-  }
-
-  // TODO
-  class MySQLRecipeEditor extends MySQLRecipeBuilder {
-
-  }
-
-  // TODO
-  class MySQLDirectoryEditor extends MySQLDirectoryBuilder {
-
-  }
-
-  // TODO
-  class MySQLTagEditor extends MySQLTagBuilder {
-
-  }
 
 }

@@ -3,70 +3,45 @@ package model;
 import java.util.List;
 import java.util.Map;
 
-// TODO NOTES:
-// - database never exposes SQL syntax! nobody else should have to import java.sql!
-//   - this also means all sqlexceptions must be in try/catches
-// - REMOVE EDITOR INTERFACES AND JUST HAVE THEM BE IMPLEMENTOR CLASSES
+// Operations on the database, performed by other model objects.
+interface Database {
 
 
-// The database storing this recipe system.
-public interface Database {
+  // Create a builder for a new file type or tag.
+  RecipeBuilder createRecipe(FileObserver obs);
+  DirectoryBuilder createDirectory(FileObserver obs);
+  TagBuilder createTag(TagObserver obs);
+
+  // Create a builder to edit a given file or tag.
+  RecipeBuilder editRecipe(Recipe editing);
+  DirectoryBuilder editDirectory(Directory editing);
+  TagBuilder editTag(Tag editing);
 
   // Load the details of a recipe.
-  Recipe loadRecipe(int r_id) throws IllegalArgumentException;
+  Recipe loadRecipe(int r_id) throws RuntimeException;
 
   // Load the details of a directory, but not its contents.
-  Directory loadDirectory(int d_id) throws IllegalArgumentException;
+  Directory loadDirectory(int d_id) throws RuntimeException;
 
-  // Populate the contents of the given directory.
-  Map<Integer, File> loadDirectoryContents(int d_id) throws IllegalArgumentException;
+  // Load the directories that are children of the given directory.
+  Map<Integer, Directory> loadDirectoryChildren(int d_id) throws RuntimeException;
+
+  // Load the non-directory contents of the given directory.
+  Map<Integer, File> loadDirectoryContents(int d_id) throws RuntimeException;
 
   // Retrieve the IDs of the files in the selected directory matching the selected tags.
-  List<Integer> filterFiles(int dir_id, List<Integer> tags) throws IllegalArgumentException;
-
-  // Create new files or tags from a builder.
-  Recipe createRecipe(RecipeBuilder r) throws RuntimeException;
-  Directory createDirectory(DirectoryBuilder d) throws RuntimeException;
-  Tag createTag(TagBuilder t) throws RuntimeException;
-
-  // Edit the details of a file or tag from a builder.
-  void updateRecipe(int r_id, RecipeBuilder r) throws IllegalArgumentException;
-  void updateDirectory(int d_id, DirectoryBuilder d) throws IllegalArgumentException;
-  void updateTag(int t_id, TagBuilder t) throws IllegalArgumentException;
+  List<Integer> filterFiles(int dir_id, List<Tag> tags) throws RuntimeException;
 
   // Move a file.
-  void moveFile(int f_id, int newParentDir) throws IllegalArgumentException;
+  void moveFile(int file, int newParent) throws RuntimeException;
 
   // Delete files.
-  void deleteFile(int f_id) throws IllegalArgumentException;
-  void deleteTag(int t_id) throws IllegalArgumentException;
+  void deleteFile(int file) throws RuntimeException;
+  void deleteTag(int tag) throws RuntimeException;
 
   // Apply or remove tags on files.
-  void tagFile(int f_id, int t_id) throws IllegalArgumentException;
-  void untagFile(int f_id, int t_id) throws IllegalArgumentException;
-
-  // Create a new Recipe.
-  interface RecipeBuilder {
-    RecipeBuilder setName(String newName);
-    RecipeBuilder setDoc(String document);
-    RecipeBuilder setUrl(String url);
-    RecipeBuilder setImg(String img);
-    RecipeBuilder setParent(int d_id);
-    RecipeBuilder submit() throws IllegalStateException;
-  }
-
-  // Create a new Directory.
-  interface DirectoryBuilder {
-    DirectoryBuilder setName(String newName);
-    DirectoryBuilder setParent(int d_id);
-    DirectoryBuilder submit() throws IllegalStateException;
-  }
-
-  // Create a new Tag.
-  interface TagBuilder {
-    TagBuilder setName(String name);
-    TagBuilder submit() throws IllegalStateException;
-  }
+  void tagFile(int file, int tag) throws RuntimeException;
+  void untagFile(int file, int tag) throws RuntimeException;
 
   // Shut down the connection.
   void close() throws RuntimeException;

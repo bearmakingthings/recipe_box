@@ -3,15 +3,20 @@ package model;
 import java.util.Map;
 
 public class TagSet {
-  private Map<Integer, Tag> selected;
-  private Map<Integer, Tag> unselected;
+  protected Database db;
+  protected Map<Integer, Tag> selected;
+  protected Map<Integer, Tag> unselected;
+
+  TagSet(Database db) {
+    this.db = db;
+  }
 
 
-  public void createTag(String name) {
+  public void addTag(String name) {
     // todo
   }
 
-  public void removeTag(String name) {
+  public void deleteTag(String name) {
 
   }
 

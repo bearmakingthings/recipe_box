@@ -2,9 +2,9 @@ package model;
 
 // A file, which may be a directory or a recipe.
 public abstract class File {
-  final int id;
-  String name;
-  Directory parent;
+  protected final int id;
+  protected String name;
+  protected Directory parent;
 
   // Initialize this file, unaware of its parent Directory.
   protected File(int id, String name) {
@@ -13,6 +13,7 @@ public abstract class File {
     this.parent = null;
   }
 
+  // Set the parent directory of this File.
   void setParent(Directory parent) {
     this.parent = parent;
   }

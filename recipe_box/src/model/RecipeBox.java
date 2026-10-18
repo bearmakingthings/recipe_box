@@ -8,22 +8,22 @@ public interface RecipeBox {
   void load();
 
   // Creation, modification, and deletion operations on the recipes.
-  Database.RecipeBuilder addRecipe();
-  Database.RecipeBuilder editRecipe(int r_id);
-  Database.DirectoryBuilder addDirectory();
-  Database.DirectoryBuilder editDirectory(int d_id);
+  RecipeBuilder addRecipe();
+  RecipeBuilder editRecipe(int r_id);
+  DirectoryBuilder addDirectory();
+  DirectoryBuilder editDirectory(int d_id);
   void deleteFile(int d_id);
   void renameFile(int d_id, String newName);
 
+  // Creation, modification, and deletion of tags.
+  TagBuilder addTag(String name);
+  TagBuilder editTag(int t_id);
+  void deleteTag(int t_id);
+
   // Change the working directory.
-  List<File> openDirectory(List<String> path); // todo should this signature be different?
-  List<File> expandDirectory(List<String> path);
+  List<File> openDirectory(List<String> path); // todo what should this signature be?
   void moveFile(int f_id, List<String> newDir);
 
-  // Creation, modification, and deletion of tags.
-  int addTag(String name);
-  void deleteTag(int t_id);
-  void renameTag(int t_id, String newName);
 
   // Selection and deselection of tags.
   void selectTag(String name);

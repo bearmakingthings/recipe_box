@@ -6,11 +6,11 @@ public class Recipe extends File {
   protected String img;
   protected String url;
 
-  Recipe(int id, String name, String document, String img, String url) {
+  Recipe(int id, String name) {
     super(id, name);
-    this.document = document;
-    this.img = img;
-    this.url = url;
+    this.document = null;
+    this.img = null;
+    this.url = null;
   }
 
   public String getDocument() {
@@ -24,4 +24,5 @@ public class Recipe extends File {
   public String getUrl() {
     return this.url;
   }
+
 }

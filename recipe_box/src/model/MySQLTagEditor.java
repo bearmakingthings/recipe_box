@@ -1,7 +1,7 @@
 package model;
 
 public class MySQLTagEditor extends MySQLTagBuilder {
-  public MySQLTagEditor() {
-    super(this, tObs);
+  MySQLTagEditor(MySQLDB db, TagObserver obs) {
+    super(db, obs);
   }
 }

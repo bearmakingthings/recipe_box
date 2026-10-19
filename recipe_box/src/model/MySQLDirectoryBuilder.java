@@ -6,7 +6,7 @@ public class MySQLDirectoryBuilder implements DirectoryBuilder {
   public MySQLDirectoryBuilder() {
   }
 
-  public MySQLDirectoryBuilder(MySQLDB mySQLDB, FileObserver fObs) {
+  MySQLDirectoryBuilder(MySQLDB db, FileObserver obs) {
   }
 
   public DirectoryBuilder setName(String newName) {
@@ -19,5 +19,9 @@ public class MySQLDirectoryBuilder implements DirectoryBuilder {
 
   public void submit() throws RuntimeException {
 
+  }
+
+  public Directory build(int id) throws IllegalStateException {
+    return null;
   }
 }

@@ -13,4 +13,8 @@ public class MySQLTagBuilder implements TagBuilder {
   public void submit() throws RuntimeException {
 
   }
+
+  public Tag build(int id) throws IllegalStateException {
+    return null;
+  }
 }

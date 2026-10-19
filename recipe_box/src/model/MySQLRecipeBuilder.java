@@ -1,18 +1,17 @@
 package model;
 
-// TODO MUST TEST
 // Build a new recipe and insert it into the database.
 public class MySQLRecipeBuilder implements RecipeBuilder {
-  protected MySQLDB db;
-  protected FileObserver obs;
-  protected String name;
-  protected String doc;
-  protected String url;
-  protected String img;
-  protected Integer parent;
+  MySQLDB db;
+  FileObserver obs;
+  Integer parent;
+  String name;
+  String doc;
+  String url;
+  String img;
 
   // Create a new builder and sign on its observer.
-  protected MySQLRecipeBuilder(MySQLDB db, FileObserver obs) {
+  MySQLRecipeBuilder(MySQLDB db, FileObserver obs) {
     this.db = db;
     this.obs = obs;
     this.name = null;
@@ -47,8 +46,28 @@ public class MySQLRecipeBuilder implements RecipeBuilder {
     return this;
   }
 
+  // Submit this new recipe to be added to the database.
   public void submit() throws RuntimeException {
-
+    // Check that the required fields are present before submitting.
+    this.checkSubmitConditions();
     this.db.submitRecipe(this);
+  }
+
+  public Recipe build(int id) throws IllegalStateException {
+    Recipe thisRec = new Recipe(id, this.name);
+    thisRec.document = this.doc;
+    thisRec.img = this.img;
+    thisRec.url = this.url;
+    return thisRec;
+  }
+
+  // Check that the recipe's name and parent are not null.
+  protected void checkSubmitConditions() {
+    if (this.name == null) {
+      throw new IllegalStateException("A recipe must have a name.");
+    }
+    if (this.parent == null) {
+      throw new IllegalStateException("A recipe must have a parent directory.");
+    }
   }
 }

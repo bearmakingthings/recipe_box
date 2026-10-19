@@ -13,9 +13,9 @@ interface Database {
   TagBuilder createTag(TagObserver obs);
 
   // Create a builder to edit a given file or tag.
-  RecipeBuilder editRecipe(Recipe editing);
-  DirectoryBuilder editDirectory(Directory editing);
-  TagBuilder editTag(Tag editing);
+  RecipeBuilder editRecipe(FileObserver obs, Recipe editing);
+  DirectoryBuilder editDirectory(FileObserver obs, Directory editing);
+  TagBuilder editTag(TagObserver obs, Tag editing);
 
   // Load the details of a recipe.
   Recipe loadRecipe(int r_id) throws RuntimeException;

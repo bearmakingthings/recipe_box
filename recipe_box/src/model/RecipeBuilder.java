@@ -11,4 +11,7 @@ public interface RecipeBuilder {
 
   // Insert this new recipe into the database.
   void submit() throws RuntimeException;
+
+  // Build a Recipe object from the details set here.
+  Recipe build(int id) throws IllegalStateException;
 }

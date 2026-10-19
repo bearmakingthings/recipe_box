@@ -1,22 +1,18 @@
 package model;
 
-// TODO TEST
+// Edit an existing Recipe and update both the database and the object.
 public class MySQLRecipeEditor extends MySQLRecipeBuilder {
   protected Recipe editing;
 
-  MySQLRecipeEditor(MySQLDB db, Recipe editing) {
-    super(db, fObs);
+  MySQLRecipeEditor(MySQLDB db, FileObserver obs, Recipe editing) {
+    super(db, obs);
     this.editing = editing;
-    this.parent = null;
-    this.name = null;
-    this.doc = null;
-    this.img = null;
-    this.url = null;
   }
 
   @Override
   public void submit() throws RuntimeException {
-
+    // Check that the required fields have not been left empty.
+    super.checkSubmitConditions();
     // Enter the changes into the database.
     this.db.submitRecipeEdits(this);
 

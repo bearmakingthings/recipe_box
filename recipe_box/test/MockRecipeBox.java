@@ -1,69 +1,63 @@
+import java.util.ArrayList;
 import java.util.List;
 
+import model.Directory;
 import model.DirectoryBuilder;
 import model.File;
+import model.Recipe;
+import model.RecipeBoxImp;
 import model.RecipeBuilder;
 import model.TagBuilder;
 
-public class MockRecipeBox implements model.RecipeBox {
+// Mock of RecipeBox to spy on observer behavior.
+public class MockRecipeBox extends RecipeBoxImp {
+  private StringBuilder log;
+  private List<File> files;
 
-  public void load() {
-
+  public MockRecipeBox(String db_url, String user, String pass) {
+    super(db_url, user, pass);
+    this.log = new StringBuilder();
+    this.files = new ArrayList<>();
   }
 
-  public RecipeBuilder addRecipe() {
-    return null;
+  @Override
+  public void notifyNew(int id, int parent, RecipeBuilder rec) {
+    Recipe built = rec.build(id);
+    this.log.append("New recipe ")
+            .append(built.getName()).append(" ")
+            .append("parent ").append(parent);
+    this.files.add(built);
   }
 
-  public RecipeBuilder editRecipe(int r_id) {
-    return null;
+  @Override
+  public void notifyNew(int id, int parent, DirectoryBuilder dir) {
+    Directory built = dir.build(id);
+    this.log.append("New directory ")
+            .append(built.getName()).append(" ")
+            .append("parent ").append(parent);
+    this.files.add(built);
   }
 
-  public DirectoryBuilder addDirectory() {
-    return null;
+  @Override
+  public void notifyMoved(int file, int newParent) {
+    this.log.append("Moved ")
+            .append(file).append(" ")
+            .append("to ").append(newParent);
   }
 
-  public DirectoryBuilder editDirectory(int d_id) {
-    return null;
+  @Override
+  public void notifyNew(int id, TagBuilder tag) {
+    // todo
   }
 
-  public void deleteFile(int d_id) {
-
+  // Return the last-logged message(s) and clear the log.
+  public String getLog() {
+    String logState = this.log.toString();
+    this.log = new StringBuilder();
+    return logState;
   }
 
-  public void renameFile(int d_id, String newName) {
-
-  }
-
-  public TagBuilder addTag(String name) {
-    return null;
-  }
-
-  public TagBuilder editTag(int t_id) {
-    return null;
-  }
-
-  public void deleteTag(int t_id) {
-
-  }
-
-  public List<File> openDirectory(List<String> path) {
-    return List.of();
-  }
-
-  public void moveFile(int f_id, List<String> newDir) {
-
-  }
-
-  public void selectTag(String name) {
-
-  }
-
-  public void deselectTag(String name) {
-
-  }
-
-  public void clearTags() {
-
+  public File getNewFile() {
+    return this.files.getLast();
   }
 }

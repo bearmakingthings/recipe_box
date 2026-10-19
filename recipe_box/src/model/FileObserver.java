@@ -2,11 +2,14 @@ package model;
 
 // Notify the model of updates to files.
 public interface FileObserver {
-  // Add a newly created File to the model.
-  void notifyNew(File file, int parent);
+  // Notify the model of a new File.
+  void notifyNew(int id, int parent, RecipeBuilder rec);
+  void notifyNew(int id, int parent, DirectoryBuilder dir);
 
-  // Update the directory tree when a file is moved.
+  // Inform the model that a file was moved.
   void notifyMoved(int file, int newParent);
 
+  // Inform the model that a file's details were changed.
+  void notifyUpdated(File file);
 
 }

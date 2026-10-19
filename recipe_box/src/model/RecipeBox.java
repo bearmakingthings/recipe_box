@@ -7,6 +7,9 @@ public interface RecipeBox {
   // Open the root directory and load all components.
   void load();
 
+  // Close the recipe box before the program quits.
+  void close();
+
   // Creation, modification, and deletion operations on the recipes.
   RecipeBuilder addRecipe();
   RecipeBuilder editRecipe(int r_id);

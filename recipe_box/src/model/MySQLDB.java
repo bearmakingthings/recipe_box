@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static java.sql.Types.VARCHAR;
+
 
 /*
   TODO notes on the builders :)
@@ -23,12 +25,12 @@ import java.util.TreeMap;
 
 
 // The connection to the local recipe database and operations on it.
-public class MySQLDB implements Database {
+class MySQLDB implements Database {
   // The active connection to the DB.
   protected Connection con;
 
   // Log into the given database.
-  public MySQLDB(String db_url, String user, String pass) throws RuntimeException {
+  MySQLDB(String db_url, String user, String pass) throws RuntimeException {
     // Connect to the database.
     con = null;
     try {
@@ -68,7 +70,7 @@ public class MySQLDB implements Database {
     return new MySQLRecipeBuilder(this, obs);
   }
 
-  // TODO CURRENT WORK BLOCK ----------------------------------------------------------------------------------------
+  // TODO TESTING RECIPE STUFF -----------------------------------------------------------------------
 
   // Create a new Recipe object using the given builder.
   void submitRecipe(MySQLRecipeBuilder bdr) {
@@ -77,16 +79,39 @@ public class MySQLDB implements Database {
     int recipeId = this.insertFile(bdr.parent);
 
     // Insert the recipe details into the recipes table.
-    // TODO doing
-
     try {
-      PreparedStatement recipeStmt = con.prepareStatement("");
+      PreparedStatement recipeStmt = con.prepareStatement(
+              "INSERT INTO recipes " +
+              "(id, name, document, url, image) " +
+              "VALUES (?, ?, ?, ?, ?);");
 
       // Set the retrieved file id as this recipe's id.
       recipeStmt.setInt(1, recipeId);
+      // Set the name.
+      recipeStmt.setString(2, bdr.name);
 
-      // ADD THE FEATURES PLS
+      // Add each optional feature, or NULL if it was not set.
+      if (bdr.doc != null) {
+        recipeStmt.setString(3, bdr.doc);
+      }
+      else {
+        recipeStmt.setNull(3, VARCHAR);
+      }
+      if (bdr.url != null) {
+        recipeStmt.setString(4, bdr.url);
+      }
+      else {
+        recipeStmt.setNull(4, VARCHAR);
+      }
+      if (bdr.img != null) {
+        recipeStmt.setString(5, bdr.img);
+      }
+      else {
+        recipeStmt.setNull(5, VARCHAR);
+      }
 
+      // Execute the query.
+      recipeStmt.executeUpdate();
 
       // Commit the transaction.
       con.commit();
@@ -94,9 +119,11 @@ public class MySQLDB implements Database {
       throw new RuntimeException("Could not create new recipe: " + e.getMessage());
     }
 
-    // TODO notify the file observer...
-
+    // Notify the file observer of the new recipe.
+    bdr.obs.notifyNew(recipeId, bdr.parent, bdr);
   }
+
+  // TODO CURRENT WORK BLOCK ----------------------------------------------------------------------------------------
 
   public DirectoryBuilder createDirectory(FileObserver obs) {
     return new MySQLDirectoryBuilder(this, obs);
@@ -108,6 +135,7 @@ public class MySQLDB implements Database {
     // Insert a new directory with the given id into the directory table, using the details
     // given in the builder.
     // Commit the transaction.
+    // Notify the observer.
   }
 
   public TagBuilder createTag(TagObserver obs) {
@@ -119,24 +147,27 @@ public class MySQLDB implements Database {
   }
 
   // Create a builder to edit the given recipe.
-  public RecipeBuilder editRecipe(Recipe editing) {
-    return new MySQLRecipeEditor(this, editing);
+  public RecipeBuilder editRecipe(FileObserver obs, Recipe editing) {
+    return new MySQLRecipeEditor(this, obs, editing);
   }
 
-  // Update the details of a recipe using the given builder.
+  // Update the details of a recipe using the given editor.
   void submitRecipeEdits(MySQLRecipeEditor edr) {
-    // If the recipe was moved, do that separately.
+    // If the recipe was moved, perform that change first.
     if (edr.parent != null) {
       this.moveFile(edr.editing.id, edr.parent);
     }
 
     // TODO
-    // Update the recipe entry with the changed fields.
+    // Update the recipe table entry with the changed fields.
     // Commit the change.
+
+    // Notify the observer.
+    edr.obs.notifyUpdated(edr.editing);
   }
 
   // TODO
-  public DirectoryBuilder editDirectory(Directory editing) {
+  public DirectoryBuilder editDirectory(FileObserver obs, Directory editing) {
     return null;
   }
 
@@ -146,7 +177,7 @@ public class MySQLDB implements Database {
   }
 
   // TODO
-  public TagBuilder editTag(Tag editing) {
+  public TagBuilder editTag(TagObserver obs, Tag editing) {
     return null;
   }
 
@@ -176,11 +207,11 @@ public class MySQLDB implements Database {
 
     // Initialize a new Recipe object from the results.
     try {
-      String name = recipeTuple.getString("name");
-      String doc = recipeTuple.getString("document");
-      String img = recipeTuple.getString("image");
-      String url = recipeTuple.getString("url");
-      return new Recipe(r_id, name, doc, img, url);
+      Recipe rec = new Recipe(r_id, recipeTuple.getString("name"));
+      rec.document = recipeTuple.getString("document");
+      rec.img = recipeTuple.getString("image");
+      rec.url = recipeTuple.getString("url");
+      return rec;
 
     } catch (SQLException e) {
       throw new RuntimeException("Details for recipe " + r_id + " could not be retrieved: "

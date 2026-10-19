@@ -18,7 +18,7 @@ public abstract class File {
     this.parent = parent;
   }
 
-  // TODO MAYBE DELETE GETTERS, DEPENDING ON WHO NEEDS THEM.
+  // TODO MAYBE DELETE GETTERS, OR REDUCE VISIBILITY, DEPENDING ON WHO NEEDS THEM.
   // getName is probably going to be useful to UIs, though?
 
   // Return the name of this File.
@@ -30,6 +30,5 @@ public abstract class File {
   public int getId() {
     return this.id;
   }
-
 
 }

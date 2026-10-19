@@ -4,4 +4,5 @@ package model;
 public interface TagBuilder {
   TagBuilder setName(String name);
   void submit() throws RuntimeException;
+  Tag build(int id) throws IllegalStateException;
 }

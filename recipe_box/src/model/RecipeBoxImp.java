@@ -41,9 +41,9 @@ public class RecipeBoxImp implements RecipeBox, FileObserver, TagObserver {
     return null;
   }
 
-  // TODO
+  // Create a new directory builder and sign ourselves on as the observer.
   public DirectoryBuilder addDirectory() {
-    return null;
+    return this.db.createDirectory(this);
   }
 
   // TODO
@@ -101,6 +101,7 @@ public class RecipeBoxImp implements RecipeBox, FileObserver, TagObserver {
 
   }
 
+  // TODO TEST
   // Receive a new recipe and potentially insert it into the working directory.
   public void notifyNew(int id, int parent, RecipeBuilder rec) {
     // If the new file was created in the working directory, insert it as such.
@@ -112,6 +113,7 @@ public class RecipeBoxImp implements RecipeBox, FileObserver, TagObserver {
     */
   }
 
+  // TODO TEST
   // Receive a new directory and potentially insert it as a child of the working directory.
   public void notifyNew(int id, int parent, DirectoryBuilder dir) {
     // If the new file was created in the working directory, insert it as such.

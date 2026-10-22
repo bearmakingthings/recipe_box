@@ -11,13 +11,14 @@ public class MySQLRecipeEditor extends MySQLRecipeBuilder {
 
   @Override
   public void submit() throws RuntimeException {
+    MySQLFileBuilder fileBdr = super.fBdr;
     // Check that the required fields have not been left empty.
-    super.checkSubmitConditions();
+    fileBdr.checkSubmitConditions();
     // Enter the changes into the database.
-    this.db.submitRecipeEdits(this);
+    fileBdr.db.submitRecipeEdits(this);
 
     // With the changes committed to the database, update the Recipe object.
-    editing.name = name;
+    editing.name = fileBdr.name;
     editing.document = doc;
     editing.img = img;
     editing.url = url;

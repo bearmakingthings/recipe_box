@@ -2,6 +2,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import model.DirectoryBuilder;
 import model.RecipeBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -136,17 +137,85 @@ public class MySQLDBTests {
     RecipeBuilder bdr = rBox.addRecipe();
     bdr.setParent(ROOT);
     RuntimeException except = assertThrows(RuntimeException.class, bdr::submit);
-    assertEquals("A recipe must have a name.", except.getMessage());
+    assertEquals("A file must have a name.", except.getMessage());
   }
 
   // Attempt to create a recipe without a parent directory.
   @Test
-  void testCreateNoParentRecipe() {
+  void testCreateRecipeWNoParent() {
     RecipeBuilder bdr = rBox.addRecipe();
     bdr.setName("Bad salsa");
     RuntimeException except = assertThrows(RuntimeException.class, bdr::submit);
-    assertEquals("A recipe must have a parent directory.", except.getMessage());
+    assertEquals("A file must have a parent directory.", except.getMessage());
   }
+
+  // Attempt to create a recipe with a non-directory parent.
+  @Test
+  void testCreateRecipeWRecipeParent() {
+    RecipeBuilder bdr = rBox.addRecipe();
+    bdr.setParent(2);
+    bdr.setName("Salsa with recipe parent");
+    assertThrows(RuntimeException.class, bdr::submit);
+  }
+
+  // Attempt to create a recipe with a nonexistent parent id.
+  @Test
+  void testCreateRecipeWFakeParent() {
+    RecipeBuilder bdr = rBox.addRecipe();
+    bdr.setParent(10000);
+    bdr.setName("Salsa with fake parent");
+    assertThrows(RuntimeException.class, bdr::submit);
+  }
+
+  // TESTS ON DIRECTORYBUILDER:
+
+  // Create a directory.
+  @Test
+  void testCreateDirectory() {
+    DirectoryBuilder bdr = rBox.addDirectory();
+    bdr.setParent(ROOT);
+    bdr.setName("Chicken");
+    bdr.submit();
+
+    assertEquals("New directory Chicken parent " + String.valueOf(ROOT), rBox.getLog());
+  }
+
+  // Attempt to create a directory without a name.
+  @Test
+  void testCreateUnnamedDirectory() {
+    DirectoryBuilder bdr = rBox.addDirectory();
+    bdr.setParent(ROOT);
+    RuntimeException except = assertThrows(RuntimeException.class, bdr::submit);
+    assertEquals("A file must have a name.", except.getMessage());
+  }
+
+  // Attempt to create a directory without a parent directory.
+  @Test
+  void testCreateDirectoryWNoParent() {
+    DirectoryBuilder bdr = rBox.addDirectory();
+    bdr.setName("Burnt chicken");
+    RuntimeException except = assertThrows(RuntimeException.class, bdr::submit);
+    assertEquals("A file must have a parent directory.", except.getMessage());
+  }
+
+  // Attempt to create a directory with a non-directory parent.
+  @Test
+  void testCreateDirectoryWRecipeParent() {
+    DirectoryBuilder bdr = rBox.addDirectory();
+    bdr.setParent(2);
+    bdr.setName("Bones of chicken");
+    assertThrows(RuntimeException.class, bdr::submit);
+  }
+
+  // Attempt to create a directory with a nonexistent parent id.
+  @Test
+  void testCreateDirectoryWFakeParent() {
+    DirectoryBuilder bdr = rBox.addDirectory();
+    bdr.setParent(10000);
+    bdr.setName("Bones of chicken");
+    assertThrows(RuntimeException.class, bdr::submit);
+  }
+
 
   // TESTS ON RECIPEEDITOR:
 
@@ -154,11 +223,13 @@ public class MySQLDBTests {
 
   // Nullify any individual string field of a recipe.
 
-  // Move a recipe from the editor.
+  // Move a recipe using the editor.
 
   // Change all fields of a recipe.
 
   // Attempt to edit a recipe with a non-recipe id.
+
+  // Attempt to edit a recipe with a non-existent new parent.
 
   // Attempt to edit a recipe with a non-directory new parent.
 

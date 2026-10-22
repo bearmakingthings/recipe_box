@@ -11,19 +11,6 @@ import java.util.TreeMap;
 
 import static java.sql.Types.VARCHAR;
 
-
-/*
-  TODO notes on the builders :)
-   - they are created via public methods that return an interface type (RecipeBuilder, etc),
-     but they are submitted via package-private methods that take in a class-specific type.
-   - muhahaha that took me so long but it's so obvious now.
-   - this allows the database implementation to access the fields of the builder directly,
-     which makes more sense than my previous method of creating getters in the interface.
-   - that previous way sucked. the users of the setter methods, who are all outside the
-     model package, would have no need for the getters, only model classes do.
- */
-
-
 // The connection to the local recipe database and operations on it.
 class MySQLDB implements Database {
   // The active connection to the DB.
@@ -70,13 +57,13 @@ class MySQLDB implements Database {
     return new MySQLRecipeBuilder(this, obs);
   }
 
-  // TODO TESTING RECIPE STUFF -----------------------------------------------------------------------
-
   // Create a new Recipe object using the given builder.
-  void submitRecipe(MySQLRecipeBuilder bdr) {
+  void submitNewRecipe(MySQLRecipeBuilder bdr) {
+
+    MySQLFileBuilder fileBdr = bdr.fBdr;
 
     // Create a new file entry under the parent directory, and get its id.
-    int recipeId = this.insertFile(bdr.parent);
+    int recipeId = this.insertFile(fileBdr.parent);
 
     // Insert the recipe details into the recipes table.
     try {
@@ -88,7 +75,7 @@ class MySQLDB implements Database {
       // Set the retrieved file id as this recipe's id.
       recipeStmt.setInt(1, recipeId);
       // Set the name.
-      recipeStmt.setString(2, bdr.name);
+      recipeStmt.setString(2, fileBdr.name);
 
       // Add each optional feature, or NULL if it was not set.
       if (bdr.doc != null) {
@@ -120,23 +107,44 @@ class MySQLDB implements Database {
     }
 
     // Notify the file observer of the new recipe.
-    bdr.obs.notifyNew(recipeId, bdr.parent, bdr);
+    fileBdr.obs.notifyNew(recipeId, fileBdr.parent, bdr);
   }
-
-  // TODO CURRENT WORK BLOCK ----------------------------------------------------------------------------------------
 
   public DirectoryBuilder createDirectory(FileObserver obs) {
     return new MySQLDirectoryBuilder(this, obs);
   }
 
   void submitNewDirectory(MySQLDirectoryBuilder bdr) {
+    MySQLFileBuilder fileBdr = bdr.fBdr;
     // Insert a new file with the given parent directory.
-    // Retrieve the new file's id.
-    // Insert a new directory with the given id into the directory table, using the details
-    // given in the builder.
-    // Commit the transaction.
+    int dirId = this.insertFile(fileBdr.parent);
+
+    // Insert a new directory with the given id and details into the directory table.
+    try {
+      PreparedStatement dirStmt = con.prepareStatement(
+              "INSERT INTO directories " +
+                      "(id, name) " +
+                      "VALUES (?, ?);");
+
+      // Set the retrieved file id as this directory's id.
+      dirStmt.setInt(1, dirId);
+      // Set its name.
+      dirStmt.setString(2, fileBdr.name);
+
+      // Execute the query.
+      dirStmt.executeUpdate();
+
+      // Commit the transaction.
+      con.commit();
+    } catch (SQLException e) {
+      throw new RuntimeException("Could not create new directory: " + e.getMessage());
+    }
+
     // Notify the observer.
+    fileBdr.obs.notifyNew(dirId, fileBdr.parent, bdr);
   }
+  
+  // TODO CURRENT WORK BLOCK ----------------------------------------------------------------------------------------
 
   public TagBuilder createTag(TagObserver obs) {
     return new MySQLTagBuilder(this, obs);
@@ -153,9 +161,10 @@ class MySQLDB implements Database {
 
   // Update the details of a recipe using the given editor.
   void submitRecipeEdits(MySQLRecipeEditor edr) {
+    MySQLFileBuilder fileBdr = edr.fBdr;
     // If the recipe was moved, perform that change first.
-    if (edr.parent != null) {
-      this.moveFile(edr.editing.id, edr.parent);
+    if (fileBdr.parent != null) {
+      this.moveFile(edr.editing.id, fileBdr.parent);
     }
 
     // TODO
@@ -163,7 +172,7 @@ class MySQLDB implements Database {
     // Commit the change.
 
     // Notify the observer.
-    edr.obs.notifyUpdated(edr.editing);
+    fileBdr.obs.notifyUpdated(edr.editing);
   }
 
   // TODO

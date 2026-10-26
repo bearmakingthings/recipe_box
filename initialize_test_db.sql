@@ -1,49 +1,33 @@
 -- Creates the recipe database.
-CREATE DATABASE IF NOT EXISTS recipe_box_test;
+DROP DATABASE IF EXISTS recipe_box_text;
+CREATE DATABASE recipe_box_test;
 USE recipe_box_test;
-
--- All recipes and directories in the database.
-CREATE TABLE IF NOT EXISTS files
-(
-	id		INT		PRIMARY KEY AUTO_INCREMENT,
-    parent 	INT		NOT NULL
-);
-
--- Add the root directory.
-INSERT INTO files VALUES (DEFAULT, 1);
-
--- Recipes and their details.
-CREATE TABLE recipes
-(
-	id				INT				PRIMARY KEY,
-    name			VARCHAR(100)	NOT NULL,
-    document		VARCHAR(20),
-    url				VARCHAR(150),
-    image			VARCHAR(20),
-    CONSTRAINT r_id 
-		FOREIGN KEY (id) REFERENCES files (id)
-		ON DELETE CASCADE
-);
 
 -- Directories and their names.
 CREATE TABLE directories
 (
-	id				INT				PRIMARY KEY,
-    name			VARCHAR(100)	NOT NULL,
-    CONSTRAINT d_id 
-		FOREIGN KEY (id) REFERENCES files (id)
-			ON DELETE CASCADE
+	id		INT				PRIMARY KEY AUTO_INCREMENT,
+    parent 	INT 			NOT NULL,	
+    name 	VARCHAR(100)	NOT NULL,
+    CONSTRAINT dir_parent 
+		FOREIGN KEY (parent) REFERENCES directories (id)
 );
 
--- Add the root directory before the foreign key constraint is placed on the directory table.
--- (Note that without this initial entry, the constraints on the directories and files 
--- tables would cause deadlock when trying to insert into either.)
-INSERT INTO directories VALUES (1, "home");
+-- Recipes and their details.
+CREATE TABLE recipes
+(
+	id			INT				PRIMARY KEY AUTO_INCREMENT,
+    parent 		INT 			NOT NULL,
+    name		VARCHAR(100)	NOT NULL,
+    document	VARCHAR(20),
+    url			VARCHAR(150),
+    image		VARCHAR(20),
+    CONSTRAINT rec_parent 
+		FOREIGN KEY (parent) REFERENCES directories (id)
+);
 
--- Update the file table so that the "parent" column must refer to a directory in the directory table.
-ALTER TABLE files 
-ADD CONSTRAINT parent_dir
-	FOREIGN KEY (parent) REFERENCES directories (id);
+-- Add the root directory.
+INSERT INTO directories (name, parent) VALUES ("root", 1);
 
 -- Tags and their names.
 CREATE TABLE tags
@@ -53,10 +37,12 @@ CREATE TABLE tags
 );
 
 -- Linking table between tags and the recipes they contain.
-CREATE TABLE tag_contents 
+CREATE TABLE recipe_tagged
 (
-	tag_id		INT 	REFERENCES tags (id) ON DELETE CASCADE,
-    file_id		INT		REFERENCES files (id) ON DELETE CASCADE,
+	tag_id			INT 	REFERENCES tags (id) ON DELETE CASCADE,
+    recipe_id		INT		REFERENCES recipes (id) ON DELETE CASCADE,
     CONSTRAINT tag_pk
-		PRIMARY KEY (tag_id, file_id)
+		PRIMARY KEY (tag_id, recipe_id)
 );
+
+-- TODO ADD DIRECTORY TAG LINKS?

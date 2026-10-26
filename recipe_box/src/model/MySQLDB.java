@@ -5,6 +5,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -32,8 +33,8 @@ class MySQLDB implements Database {
       throw new RuntimeException("Connection successful, yet database not found.");
     }
 
-    // Enable transactions. Necessary in order to insert an entry into the file table, then
-    // retrieve the new file's id to insert the matching entry into the filetype-specific table.
+    // Enable transactions.
+    // TODO is this still necessary after refactoring?
     try {
       con.setAutoCommit(false);
     } catch (SQLException e) {
@@ -62,43 +63,43 @@ class MySQLDB implements Database {
 
     MySQLFileBuilder fileBdr = bdr.fBdr;
 
-    // Create a new file entry under the parent directory, and get its id.
-    int recipeId = this.insertFile(fileBdr.parent);
-
-    // Insert the recipe details into the recipes table.
+    // Insert the file details into the recipes table.
+    int recipeId;
     try {
       PreparedStatement recipeStmt = con.prepareStatement(
               "INSERT INTO recipes " +
-              "(id, name, document, url, image) " +
-              "VALUES (?, ?, ?, ?, ?);");
+                      "(parent, name, document, url, image) " +
+                      "VALUES (?, ?, ?, ?, ?);");
 
-      // Set the retrieved file id as this recipe's id.
-      recipeStmt.setInt(1, recipeId);
+      // Set the parent directory id.
+      recipeStmt.setInt(1, fileBdr.parent);
       // Set the name.
       recipeStmt.setString(2, fileBdr.name);
 
       // Add each optional feature, or NULL if it was not set.
       if (bdr.doc != null) {
         recipeStmt.setString(3, bdr.doc);
-      }
-      else {
+      } else {
         recipeStmt.setNull(3, VARCHAR);
       }
       if (bdr.url != null) {
         recipeStmt.setString(4, bdr.url);
-      }
-      else {
+      } else {
         recipeStmt.setNull(4, VARCHAR);
       }
       if (bdr.img != null) {
         recipeStmt.setString(5, bdr.img);
-      }
-      else {
+      } else {
         recipeStmt.setNull(5, VARCHAR);
       }
 
       // Execute the query.
-      recipeStmt.executeUpdate();
+      if (recipeStmt.executeUpdate() != 1) {
+        throw new RuntimeException("Recipe insertion did not insert 1 new row.");
+      }
+
+      // Get the recipe's ID.
+      recipeId = this.getLastInsertId();
 
       // Commit the transaction.
       con.commit();
@@ -116,23 +117,24 @@ class MySQLDB implements Database {
 
   void submitNewDirectory(MySQLDirectoryBuilder bdr) {
     MySQLFileBuilder fileBdr = bdr.fBdr;
-    // Insert a new file with the given parent directory.
-    int dirId = this.insertFile(fileBdr.parent);
 
-    // Insert a new directory with the given id and details into the directory table.
+    // Insert the new file into the directory table.
+    int dirId;
     try {
       PreparedStatement dirStmt = con.prepareStatement(
               "INSERT INTO directories " +
-                      "(id, name) " +
+                      "(parent, name) " +
                       "VALUES (?, ?);");
-
-      // Set the retrieved file id as this directory's id.
-      dirStmt.setInt(1, dirId);
-      // Set its name.
+      dirStmt.setInt(1, fileBdr.parent);
       dirStmt.setString(2, fileBdr.name);
 
       // Execute the query.
-      dirStmt.executeUpdate();
+      if (dirStmt.executeUpdate() != 1) {
+        throw new RuntimeException("Directory insertion did not create 1 new row.");
+      }
+
+      // Retrieve the new directory's ID.
+      dirId = this.getLastInsertId();
 
       // Commit the transaction.
       con.commit();
@@ -154,6 +156,15 @@ class MySQLDB implements Database {
 
   }
 
+  // TODO PROBLEM PROBLEM WAITAMINUTE
+  /* TODO the what if user wants to clear out a field? like removing the image?
+      we need a way to accept null values.
+      need to differentiate between fields that have been changed to null and fields that have
+      not been updated at all.
+      maybe use decorator pattern? then editor either becomes an interface or a heavily extended
+      class. think over it for a while.
+
+   */
   // Create a builder to edit the given recipe.
   public RecipeBuilder editRecipe(FileObserver obs, Recipe editing) {
     return new MySQLRecipeEditor(this, obs, editing);
@@ -161,23 +172,79 @@ class MySQLDB implements Database {
 
   // Update the details of a recipe using the given editor.
   void submitRecipeEdits(MySQLRecipeEditor edr) {
-    MySQLFileBuilder fileBdr = edr.fBdr;
-    // If the recipe was moved, perform that change first.
-    if (fileBdr.parent != null) {
-      this.moveFile(edr.editing.id, fileBdr.parent);
-    }
-
-    // TODO
-    // Update the recipe table entry with the changed fields.
-    // Commit the change.
-
-    // Notify the observer.
-    fileBdr.obs.notifyUpdated(edr.editing);
+//    MySQLFileBuilder fileBdr = edr.fBdr;
+//    // If the recipe was moved, perform that change first.
+//    if (fileBdr.parent != null) {
+//      this.moveRecipe(edr.editing.id, fileBdr.parent, fileBdr.obs);
+//    }
+//
+//    // Collect the clauses of the update statement.
+//    List<String> clauses = new ArrayList<>();
+//    if (fileBdr.name != null) {
+//      clauses.add("name = ?");
+//    }
+//    if (edr.doc != null) {
+//      clauses.add("document = ?");
+//    }
+//    if (edr.img != null) {
+//      clauses.add("image = ?");
+//    }
+//    if (edr.url != null) {
+//      clauses.add("url = ?");
+//    }
+//
+//    // If no string fields of the recipe have been changed, do not create an update statement.
+//    if (clauses.isEmpty()) {
+//      return;
+//    }
+//    // Update the recipe table entry with the changed fields.
+//    try {
+//      StringBuilder updateBdr = new StringBuilder();
+//      updateBdr.append("UPDATE recipes ");
+//      updateBdr.append("SET ");
+//      updateBdr.append(String.join(", ", clauses));
+//      updateBdr.append(" WHERE id = ?;");
+//      String updateStr = updateBdr.toString();
+//      PreparedStatement updateStmt = con.prepareStatement(updateStr);
+//      int i = 1;
+//      if (fileBdr.name != null) {
+//        updateStmt.setString(i, fileBdr.name);
+//        i += 1;
+//      }
+//      if (edr.doc != null) {
+//        updateStmt.setString(i, edr.doc);
+//        i += 1;
+//      }
+//      if (edr.img != null) {
+//        updateStmt.setString(i, edr.img);
+//        i += 1;
+//      }
+//      if (edr.url != null) {
+//        updateStmt.setString(i, edr.url);
+//        i += 1;
+//      }
+//      updateStmt.setInt(i, edr.editing.id);
+//
+//      // Execute the update.
+//      if (updateStmt.executeUpdate() != 1) {
+//        throw new RuntimeException("Recipe update did not affect 1 row.");
+//      }
+//
+//      // Commit the change.
+//      con.commit();
+//
+//    } catch (SQLException e) {
+//      throw new RuntimeException("Recipe update failed: " + e.getMessage());
+//    }
+//
+//    // Notify the observer.
+//    fileBdr.obs.notifyUpdated(edr.editing);
   }
 
-  // TODO
+  // TODO PROBLEM SEE RECIPEEDITOR
   public DirectoryBuilder editDirectory(FileObserver obs, Directory editing) {
-    return null;
+    return new MySQLDirectoryEditor(this, obs, editing);
+
   }
 
   // TODO
@@ -261,10 +328,8 @@ class MySQLDB implements Database {
     ResultSet dirChildren;
     try {
       PreparedStatement getChildren = con.prepareStatement("SELECT * " +
-              "FROM files " +
-              "JOIN directories " +
-              "ON files.id = directories.id " +
-              "WHERE files.parent = ?");
+              "FROM directories " +
+              "WHERE parent = ?");
 
       getChildren.setInt(1, d_id);
       dirChildren = getChildren.executeQuery();
@@ -302,10 +367,8 @@ class MySQLDB implements Database {
     ResultSet dirContents;
     try {
       PreparedStatement getContents = con.prepareStatement("SELECT * " +
-              "FROM files " +
-              "JOIN recipes " +
-              "ON files.id = recipes.id " +
-              "WHERE files.parent = ?");
+              "FROM recipes " +
+              "WHERE parent = ?");
 
       getContents.setInt(1, d_id);
       dirContents = getContents.executeQuery();
@@ -372,25 +435,50 @@ class MySQLDB implements Database {
 
   // TODO TEST
   // Move a file from its current directory to the one given.
-  public void moveFile(int file, int newParent) throws RuntimeException {
+  public void moveRecipe(int r_id, int newParent, FileObserver obs) throws RuntimeException {
     try {
       // Update the file table entry for this file with the new parent directory.
       PreparedStatement moveStmt = con.prepareStatement(
-              "UPDATE files " +
+              "UPDATE recipes " +
                       "SET parent = ? " +
                       "WHERE id = ?;");
       moveStmt.setInt(1, newParent);
-      moveStmt.setInt(2, file);
+      moveStmt.setInt(2, r_id);
       if (moveStmt.executeUpdate() != 1) {
-        throw new RuntimeException("File move was not executed.");
+        throw new RuntimeException("Recipe move was not executed.");
       }
       // Commit the change.
       con.commit();
     } catch (SQLException e) {
-      throw new RuntimeException("Could not move file: " + e.getMessage());
+      throw new RuntimeException("Could not move recipe: " + e.getMessage());
     }
 
-    // TODO notify the observer.
+    // Notify the observer.
+    obs.notifyMoved(r_id, newParent);
+  }
+
+  // TODO TEST
+  // Move a file from its current directory to the one given.
+  public void moveDirectory(int d_id, int newParent, FileObserver obs) throws RuntimeException {
+    try {
+      // Update the file table entry for this file with the new parent directory.
+      PreparedStatement moveStmt = con.prepareStatement(
+              "UPDATE directories " +
+                      "SET parent = ? " +
+                      "WHERE id = ?;");
+      moveStmt.setInt(1, newParent);
+      moveStmt.setInt(2, d_id);
+      if (moveStmt.executeUpdate() != 1) {
+        throw new RuntimeException("Directory move was not executed.");
+      }
+      // Commit the change.
+      con.commit();
+    } catch (SQLException e) {
+      throw new RuntimeException("Could not move directory: " + e.getMessage());
+    }
+
+    // Notify the observer.
+    obs.notifyMoved(d_id, newParent);
   }
 
   // TODO
@@ -404,33 +492,13 @@ class MySQLDB implements Database {
     // Delete this tag from the tag table, removing its entries in the linking table.
   }
 
-  // Insert a new file into the database and return its ID. Does not commit.
-  protected int insertFile(Integer parent) throws RuntimeException {
-    if (parent == null) {
-      throw new IllegalStateException("New file must have a parent directory.");
+  private int getLastInsertId() throws SQLException {
+    // Retrieve the ID of the inserted file.
+    ResultSet idSet = con.prepareStatement("SELECT LAST_INSERT_ID();").executeQuery();
+    if (!idSet.next()) {
+      throw new RuntimeException("Last inserted ID could not be retrieved.");
     }
-    try {
-      // Insert a new file with the given parent directory.
-      PreparedStatement fileStmt = con.prepareStatement(
-              "INSERT INTO files (parent) VALUES (?)");
-      fileStmt.setInt(1, parent);
-      if (fileStmt.executeUpdate() != 1) {
-        throw new RuntimeException("File insertion was not executed..");
-      }
-      // Retrieve the newly inserted ID.
-      PreparedStatement getFileId = con.prepareStatement("SELECT last_insert_id();");
-      ResultSet idSet = getFileId.executeQuery();
-      // Make sure the result set is not empty.
-      if (!idSet.next()) {
-        throw new RuntimeException("Could not retrieve inserted file's ID");
-      }
-      // The ID should be the first and only column in the result set.
-      return idSet.getInt(1);
-
-    } catch (SQLException e) {
-      throw new RuntimeException("Error creating new file: " + e.getMessage());
-    }
+    return idSet.getInt(1);
   }
-
 
 }

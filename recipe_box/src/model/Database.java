@@ -33,7 +33,8 @@ interface Database {
   List<Integer> filterFiles(int dir_id, List<Tag> tags) throws RuntimeException;
 
   // Move a file.
-  void moveFile(int file, int newParent) throws RuntimeException;
+  void moveRecipe(int r_id, int newParent, FileObserver obs) throws RuntimeException;
+  void moveDirectory(int d_id, int newParent, FileObserver obs) throws RuntimeException;
 
   // Delete files.
   void deleteFile(int file) throws RuntimeException;

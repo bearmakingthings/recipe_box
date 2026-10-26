@@ -1,11 +1,9 @@
 
-SHOW TABLES IN recipe_box;
+SHOW TABLES IN recipe_box_test;
 
-USE recipe_box;
+USE recipe_box_test;
 
-
-DESCRIBE files;
-DESCRIBE directories;
-DESCRIBE recipes;
-DESCRIBE tags;
-DESCRIBE tag_contents;
+SELECT * FROM directories;
+SELECT * FROM recipes;
+SELECT * FROM tags;
+SELECT * FROM recipe_tagged;
